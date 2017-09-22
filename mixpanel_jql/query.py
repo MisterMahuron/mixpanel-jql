@@ -102,7 +102,7 @@ class JQL(object):
     ENDPOINT = 'https://mixpanel.com/api/%s/jql'
     VERSION = '2.0'
 
-    def __init__(self, api_secret, params, events=True, people=False):
+    def __init__(self, api_secret, params, jql_query=None, events=True, people=False):
         """
         params      - parameters to the script
         filters     - an iterable of filters to apply (use list to guarantee a
@@ -115,6 +115,7 @@ class JQL(object):
         """
         self.api_secret = api_secret
         self.params = params
+        self.jql_query = jql_query
         self.operations = ()
         if events and people:
             self.source = "join(Events(params), People())"
@@ -161,7 +162,10 @@ class JQL(object):
         return jql
 
     def query_plan(self):
-        return str(self)
+        if self.jql_query is None:
+            return str(self)
+        else:
+            return self.jql_query
 
     def __str__(self):
         script = "function main() { return %s%s; }" %\
@@ -175,5 +179,6 @@ class JQL(object):
                                          'script': self.query_plan()},
                                    stream=True)) as resp:
             resp.raise_for_status()
-            for row in ijson.items(RequestsStreamWrapper(resp), 'item'):
-                yield row
+            return resp.json()
+            #for row in ijson.items(RequestsStreamWrapper(resp), 'item'):
+            #    yield row
